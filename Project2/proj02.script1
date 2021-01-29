@@ -1,0 +1,16 @@
+#  Reid Harry
+#  Computer Project #2
+
+
+#!/bin/tcsh -f
+
+# Print an appropriate title
+echo "Census units in $argv[1]:q county (Sorted by population):"
+
+# Prints out the collumn headers
+cat /user/cse325/Projects/project02.headers
+
+# Finds and sorts all census units in a county (second command line token) 
+grep "..| $argv[1]:q" /user/cse325/Projects/project02.data | sort -b -t "|" -k 3n
+
+

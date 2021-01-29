@@ -1,0 +1,32 @@
+#  Reid Harry
+#  Computer Project #2
+
+#!/bin/tcsh -f
+
+if  ( "$argv[2]" == "A" ) then
+  # Prints an appropriate title
+  echo "Top $argv[1] census units with the largest population:"
+  # Prints collumn headers
+  cat /user/cse325/Projects/project02.headers
+  # Prints top N census unit populations
+  sort -b -t "|" -k 3nr /user/cse325/Projects/project02.data | head -"$argv[1]"
+endif
+
+if  ( "$argv[2]" == "C" ) then
+  # Prints an appropriate title
+  echo "Top $argv[1] cities with the largest population:"
+  # Prints collumn headers
+  cat /user/cse325/Projects/project02.headers
+  # Prints top N city populations
+  grep ".. city" /user/cse325/Projects/project02.data | sort -b -t "|" -k 3nr | head -"$argv[1]"
+endif
+
+if  ( "$argv[2]" == "T" ) then
+  # Prints an approriate title
+  echo "Top $argv[1] townships with the largest population:"
+  # Prints collumn headers
+  cat /user/cse325/Projects/project02.headers
+  # Prints top N township populations
+  grep ".. township" /user/cse325/Projects/project02.data | sort -b -t "|" -k 3nr | head -"$argv[1]"
+endif
+

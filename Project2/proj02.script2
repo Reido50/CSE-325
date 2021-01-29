@@ -1,0 +1,20 @@
+#  Reid Harry
+#  Computer Project #2
+
+#!/bin/tcsh -f
+
+# Loops through all given counties (command-line tokens)
+foreach item ($argv[*]:q)
+  # Prints an appropriate title
+  echo "Census units in $item county (Sorted by population):"
+
+  # Prints collumn headers
+  cat /user/cse325/Projects/project02.headers
+
+  # Finds and sorts all census units in a given county
+  grep "..| $item" /user/cse325/Projects/project02.data | sort -b -t "|" -k 3n
+
+  # Prints a newline for clarity in output
+  echo " \n"
+end
+
