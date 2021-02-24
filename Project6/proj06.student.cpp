@@ -1,6 +1,6 @@
 /**
  * Reid Harry
- * Computer Project #5 
+ * Computer Project #6
 */
 
 #include <stdio.h>
@@ -10,6 +10,7 @@
 #include <vector>
 #include <unistd.h>
 #include <pthread.h>
+#include <stdexcept>
 using namespace std;
 
 class Product
@@ -49,9 +50,75 @@ void* consumer(void* arg);
 
 vector<Product> inventory;
 vector<Order> orders;
+int numProducers = 1;
+int bufferSize = 10;
 
 int main(int argc, char **argv)
 {
+    // Get command line arguments
+    for (int i = 1; i < argc; i++)
+    {
+        if (argv[i][0] == '-')
+        {
+            if (argv[i][1] == 'b')
+            {
+                // Buffer size argument
+
+                // Try to get a number from the following arguemnt
+                try 
+                {
+                    bufferSize = stoi(argv[i+1]);
+                    i++;
+                    if (bufferSize > 30)
+                    {
+                        printf("Given buffer size is too large. Setting to max capacity (30).\n");
+                        bufferSize = 30;
+                    }
+                }
+                catch (std::invalid_argument& e)
+                {
+                    printf("-b was not followed by a valid argument! Using default value.\n");
+                }
+                catch (std::out_of_range& e)
+                {
+                    printf("-b was not followed by any argument! Using default value.\n");
+                }
+                catch (std::logic_error& e)
+                {
+                    printf("-b was not followed by any argument! Using default value.\n");
+                }
+            }
+            else if (argv[i][1] == 'p')
+            {
+                // Number of producers argument
+
+                // Try to get a number from the following arguemnt
+                try 
+                {
+                    numProducers = stoi(argv[i+1]);
+                    i++;
+                    if (numProducers > 9)
+                    {
+                        printf("Given number of producers is too large. Setting to max capacity (9).\n");
+                        numProducers = 9;
+                    }
+                }
+                catch (std::invalid_argument& e)
+                {
+                    printf("-p was not followed by a valid argument! Using default value.\n");
+                }
+                catch (std::out_of_range& e)
+                {
+                    printf("-p was not followed by any argument! Using default value.\n");
+                }
+                catch (std::logic_error& e)
+                {
+                    printf("-p was not followed by any argument! Using default value.\n");
+                }
+            }
+        }
+    }
+
     // Open inventory.old
     FILE* oldInventory = fopen("inventory.old", "r");
     if (oldInventory == NULL)
