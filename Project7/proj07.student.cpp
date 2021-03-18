@@ -72,15 +72,31 @@ class RegisterUnit
     }
 };
 
-
-
 class DataCacheEntry
 {
 private:
     bool V = false;
     bool M = false;
     uint16 tag = 0x00;
+    uint16 data[8];
 public:
+    DataCacheEntry()
+    {
+        V = false;
+        M = false;
+        tag = 0x00;
+    }
+
+    uint16& operator[]( unsigned I )
+    {
+      return data[I];
+    }
+
+    const uint16& operator[]( unsigned I ) const
+    {
+      return data[I];
+    }
+
     void SetV(bool v) { V = v; }
     bool GetV() { return V; }
 
@@ -89,14 +105,91 @@ public:
 
     void SetTag(uint16 t) { tag = t; }
     bool GetTag() { return tag; }
-    
-     
+};
+
+class DataCache
+{
+private:
+    DataCacheEntry cache[8];
+public:
+    DataCache()
+    {
+        for (unsigned int i = 0; i < 8; i++)
+        {
+            cache[i] = DataCacheEntry();
+        }
+    }
+
+    DataCacheEntry& operator[]( unsigned I )
+    {
+      return cache[I];
+    }
+
+    const DataCacheEntry& operator[]( unsigned I ) const
+    {
+      return cache[I];
+    }
+
+    void display()
+    {
+        printf("     V M Tag  0  1  2  3  4  5  6  7\n");
+        printf("------------------------------------\n");
+
+        for (unsigned int i = 0; i < 8; i++)
+        {
+            printf("[%u]: %u %u %03x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                i, cache[i].GetV(), cache[i].GetM(), cache[i].GetTag(),
+                cache[i][0], cache[i][1], cache[i][2], cache[i][3], cache[i][4],
+                cache[i][5], cache[i][6], cache[i][7]);
+        }
+    }
+};
+
+class RAM
+{
+private:
+    uint16 content[65536];
+public:
+    RAM()
+    {
+        for (unsigned int i = 0; i < 65536; i++)
+        {
+            content[i] = 0x00;
+        }
+    }
+
+    uint16& operator[]( unsigned I )
+    {
+      return content[I];
+    }
+
+    const uint16& operator[]( unsigned I ) const
+    {
+      return content[I];
+    }
+
+    void display()
+    {
+        for (int i = 0; i < 128; i+=16)
+        {            
+            printf("%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                i, content[i], content[i+1], content[i+2], content[i+3],
+                content[i+4], content[i+5], content[i+6], content[i+7],
+                content[i+8], content[i+9], content[i+10], content[i+11],
+                content[i+12], content[i+13], content[i+14], content[i+15], content[i+16]);
+        }
+    }
 };
 
 int main(int argc, char **argv)
 {
+    RegisterUnit registers;
+    DataCache cache;
+    RAM ram;
+
     bool debugMode = false;
     bool ramMode = false;
+    string ramName = "";
     string fileName = "";
 
     // Get command line arguments
@@ -119,6 +212,8 @@ int main(int argc, char **argv)
             {
                 // Ram argument
                 ramMode = true;
+                ramName = argv[i+1];
+                i++;
             }
             else
             {
@@ -127,29 +222,83 @@ int main(int argc, char **argv)
         }
     }
 
+    // Open ram file if ram flag set
+    if (ramMode)
+    {
+        FILE* ramFile = fopen(ramName.c_str(), "r");
+        if (ramFile == NULL)
+        {
+            // File not found
+            printf("ERROR: the ram input argument was not found.\n");
+            exit(-1);
+        }
+
+        unsigned int ramAddress = -1;
+        unsigned int ramLine[16];
+        while (fscanf(ramFile, "%04x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+            &ramAddress, &ramLine[0], &ramLine[1], &ramLine[2], &ramLine[3],
+            &ramLine[4], &ramLine[5], &ramLine[6], &ramLine[7],
+            &ramLine[8], &ramLine[9], &ramLine[10], &ramLine[11],
+            &ramLine[12], &ramLine[13], &ramLine[14], &ramLine[15]) == 17)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                ram[ramAddress + i] = ramLine[i];
+            }
+        }
+    }
+
+    // Display debug info if necessary
+    if (debugMode)
+    {
+        printf("CONTENTS OF REGISTERS, CACHE, AND RAM BEFORE INPUT INSTRUCTION:\n");
+
+        registers.display(cout);
+
+        printf("\n");
+        cache.display();
+
+        printf("\n");
+        ram.display();
+        printf("\n");
+    }
+
     // Open the file
     FILE* file = fopen(fileName.c_str(), "r");
     if (file == NULL)
     {
         // file not found
-        printf("ERROR: the input argument was not found.\n");
+        printf("ERROR: the file input argument was not found.\n");
         exit(-1);
     }
 
     // Traverse the file
     char operation[256];
-    uint16 regNum = -1;
-    uint16 address = -1;
+    unsigned int regNum = -1;
+    unsigned int address = -1;
     while (fscanf(file, "%255s %x %x", operation, &regNum, &address) == 3)
     {
-        
+        int offset = (address & 0x00000007);
+        int line = (address & 0x00000038) >> 3;
+        int tag = (address & 0x0000FFC0) >> 6;
+
+        printf("%s %01x %04x %03x %01x %01x\n", 
+            operation, regNum, address,
+            tag, line, offset);
+        if (debugMode)
+        {
+            cache.display();
+        }
     }
 
-    cout << "Debug mode: " << debugMode << endl;
-    cout << "Ram mode: " << ramMode << endl;
-    if (fileName != "")
-    {
-        cout << "File name: " << fileName << endl;
-    }
+    printf("\n");
+    printf("CONTENTS OF REGISTERS, CACHE, AND RAM AFTER INPUT INSTRUCTION:\n");
+    registers.display(cout);
+
+    printf("\n");
+    cache.display();
+
+    printf("\n");
+    ram.display();
     
 }
