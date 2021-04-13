@@ -9,6 +9,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iomanip>
+#include <string.h>
 using namespace std;
 
 typedef unsigned short int uint16;
@@ -104,7 +105,7 @@ public:
     bool GetM() { return M; }
 
     void SetTag(uint16 t) { tag = t; }
-    bool GetTag() { return tag; }
+    uint16 GetTag() { return tag; }
 };
 
 class DataCache
@@ -143,6 +144,19 @@ public:
                 cache[i][5], cache[i][6], cache[i][7]);
         }
     }
+
+    int search(unsigned tag)
+    {
+        for (unsigned int i = 0; i < 8; i++)
+        {
+            if (cache[i].GetTag() == tag)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 };
 
 class RAM
@@ -172,11 +186,11 @@ public:
     {
         for (int i = 0; i < 128; i+=16)
         {            
-            printf("%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+            printf("%04x: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
                 i, content[i], content[i+1], content[i+2], content[i+3],
                 content[i+4], content[i+5], content[i+6], content[i+7],
                 content[i+8], content[i+9], content[i+10], content[i+11],
-                content[i+12], content[i+13], content[i+14], content[i+15], content[i+16]);
+                content[i+12], content[i+13], content[i+14], content[i+15]);
         }
     }
 };
@@ -282,9 +296,74 @@ int main(int argc, char **argv)
         int line = (address & 0x00000038) >> 3;
         int tag = (address & 0x0000FFC0) >> 6;
 
-        printf("%s %01x %04x %03x %01x %01x\n", 
+        // Do the operation
+        // Step 1: Look for tag and check if V == 1
+        int entryIndex = cache.search(tag);
+        bool hit = true;
+        if (entryIndex == -1)
+        {
+            // Miss!
+            hit = false;
+        }
+        else if (!cache[entryIndex].GetV())
+        {
+            // Miss!
+            hit = false;
+        }
+
+        // Step 2: If miss, copy line from RAM
+        if (!hit)
+        {
+            // Determine where to copy to/from in RAM line
+            int lineNum = (address & 0x0000FFF0);
+            if (offset > 7)
+            {
+                lineNum += 8;
+            }
+
+            // If modified, copy block into RAM
+            if (cache[line].GetM())
+            {
+                for (unsigned int i = 0; i < 8; i++)
+                {
+                    ram[i + lineNum] = cache[line][i];
+                }
+            }
+
+            for (unsigned int i = 0; i < 8; i++)
+            {
+                cache[line][i] = ram[i + lineNum];
+            }
+            cache[line].SetM(false);
+            cache[line].SetTag(tag);
+            cache[line].SetV(true);
+        }
+
+        // Step 3: Do the load or store operation
+        unsigned int data;
+        if ((string)operation == "LDR")
+        {
+            uint16 value = cache[line][offset];
+            value = (value << 8);
+            value = (value | cache[line][offset + 1]);
+            data = value;
+            registers[regNum] = value;
+        }
+        else
+        {
+            uint16 value = registers[regNum];
+            data = value;
+            cache[line][offset] = ((value & 0x0000FF00) >> 8);
+            cache[line][offset+1] = (value & 0x000000FF);
+            cache[line].SetM(true);
+        }
+
+        // Print resulkt
+        char c = hit ? 'H' : 'M';
+        printf("%s %01x %04x %03x %01x %01x %c %04x\n", 
             operation, regNum, address,
-            tag, line, offset);
+            tag, line, offset, c, data);
+
         if (debugMode)
         {
             cache.display();

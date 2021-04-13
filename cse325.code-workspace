@@ -10,7 +10,8 @@
 			"ostream": "cpp",
 			"stdexcept": "cpp",
 			"xlocale": "cpp",
-			"xstring": "cpp"
+			"xstring": "cpp",
+			"xmemory": "cpp"
 		}
 	}
 }
