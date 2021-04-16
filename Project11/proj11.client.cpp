@@ -96,11 +96,14 @@ int main(int argc, char **argv)
         perror("send 2");
         exit(7);
     }
+
+    // Receive the file contents in 64 byte segments
     char recbuf[64];
     while(recv(sd, recbuf, sizeof(recbuf), 0))
     {
         write(1, recbuf, sizeof(recbuf));
     }
 
+    // Close the file
     close(sd);
 }
